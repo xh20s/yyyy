@@ -1,0 +1,153 @@
+<!-- javascript:window.location.replace("https://bodyresultsblueprint.com/m.php?"+window.location.href); -->
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+var new_tab = true;
+var api_key = 'AIzaSyB0sc4RykoW30bEwKUa4Ve8JEX6KIXf17g';
+var live_image = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAXCAMAAABODP0nAAAAeFBMVEXtQkL////sODjsPj7sOjrqJyfpGxvyenryf3/sNDTqIyPpICDzhYX99fX83NzydHTrMDDxbGztS0vuU1PyeHjuTk7rKSn/+vr96Oj70dH3qKjxcXHvXV3uV1ftSEjtQUHsPDz4trb0jIzwZGT98/P3sLD1np70jY2hLhEtAAAA5klEQVQoz92RV47DMAxEOaRsS4l3LcsliWvKlvvfcKkUwNnAF8j7GYB4IAmS3hDD9zQkLPeKmCtLj0vrrpkVbrCVmi7L3VgXSskLMdkjjbkF0hInT7PHfvuLyC5Zip8P8WMTZWIL63PUFEKQFdF/o5L2gIRzlJ75SCuiDPhxGxxaFc/D5dKsdaQUu7RHbVSMdG5N9B38Ccmsom2q8aWjiNzEY4VSJ1Pc0Rnzf8c2hOYm6uwvFCaKNU3TJM93jNgUUNF1GjPx+fWO3GeKrZzNmEiCLZzGaDOl5+dfR4TYkCKPiBh6P/4ARHwME8e8LIQAAAAASUVORK5CYII=';
+var live_timer;
+var next_page = '';
+var prev_page = '';
+var live = '';
+function list_live_chat(page) {
+var pass_data = {key: api_key, part: 'id,snippet,authorDetails', liveChatId: live};
+if(page !== '') pass_data = {key: api_key, part: 'id,snippet,authorDetails', liveChatId: live, pageToken: page};
+$.ajax({
+    type: 'GET', 
+    url: 'https://www.googleapis.com/youtube/v3/liveChat/messages', 
+    data: pass_data, 
+    dataType: 'json',
+    success: function (data) {
+		if(data['items'].length > 0) {
+			$.each(data['items'], function(index, element) {
+				if($("#" + element['id'].split(".")[1]).length == 0) {
+					$( "#message" ).append( "<div id='" + element['id'].split(".")[1] + "' style='direction: ltr;'><div style='display: inline-block;'><img src='" + element['authorDetails']['profileImageUrl'] + "' height='44px' width='44px' /></div><div style='display: inline-block;'><div style='display: inline-block;'><b>" + element['authorDetails']['displayName'] + "</b> : </div><div style='display: inline-block;'>" + element['snippet']['textMessageDetails']['messageText'] + "</div></div></div>" );
+				}
+			});
+			$('#message').scrollTop($('#message').prop("scrollHeight"));
+		}
+		live_timer = setTimeout(function() {list_live_chat(data['nextPageToken'])}, 30000);
+    },
+    error: function (request, status, error) {
+        live_timer = setTimeout(function() {list_live_chat(page)}, 30000);
+    }
+});
+}
+function search(page) {
+next_page = '';
+prev_page = '';
+$( "#message" ).html( "" );
+live = '';
+clearTimeout(live_timer);
+$( "#result" ).html( "" );
+var html = '';
+var is_live = '';
+var is_live_image = '';
+var s = document.getElementById("search").value;
+var pass_data = {key: api_key, part: 'snippet', maxResults: '50', q: s, pageToken: page, type: 'video'}; //, eventType: 'completed'
+if(document.getElementById('live').checked) pass_data = {key: api_key, part: 'snippet', maxResults: '50', q: s, pageToken: page, type: 'video', eventType: 'live'};
+if(s !== "" && document.getElementById("b_search").disabled == false) {
+document.getElementById("b_search").disabled = true;
+$( "#play" ).html("");
+$.ajax({ 
+    type: 'GET', 
+    url: 'https://www.googleapis.com/youtube/v3/search', 
+    data: pass_data, 
+    dataType: 'json',
+    success: function (data) { 
+        is_live = "";
+		is_live_image = "";
+        if(typeof data['nextPageToken'] !== "undefined")
+        {
+            next_page = data['nextPageToken'];
+        }
+        if(typeof data['prevPageToken'] !== "undefined")
+        {
+            prev_page = data['prevPageToken'];
+        }
+		if(data['items'].length > 0) {
+            $.each(data['items'], function(index, element) {
+                if(typeof element['id']['videoId'] !== "undefined")
+                {
+                    if(element['snippet']['thumbnails']['default']['url'].indexOf("_live") !== -1)
+                    {
+                        is_live = true;
+						is_live_image = "<img class='r_live' src='" + live_image + "'>";
+                    } else {
+						is_live = false;
+						is_live_image = "";
+					}
+                    html += "<div onclick='play(\"" + element['id']['videoId'] + "\", \"" + is_live + "\", " + new_tab + ")' class='r'><div class='r_1'><img src='" + element['snippet']['thumbnails']['default']['url'] + "'>" + is_live_image + "</div><div class='r_2'><div class='r_t'><div><b>" + element['snippet']['title'] + "</b></div><div style='color: gray;'>" + element['snippet']['description'] + "</div></div></div></div>";
+                }
+            });
+            if(prev_page != "" && next_page != "") html += "<div align='center'><div class='next' onclick='search(\"" + prev_page + "\")'>الصفحة السابقة</div> - <div class='next' onclick='search(\"" + next_page + "\")'>الصفحه التالية</div></div>";
+            if(prev_page == "" && next_page != "") html += "<div align='center'><div class='next' onclick='search(\"" + next_page + "\")'>الصفحه التالية</div></div>";
+            if(prev_page != "" && next_page == "") html += "<div align='center'><div class='next' onclick='search(\"" + prev_page + "\")'>الصفحة السابقة</div></div>";
+		    $( "#result" ).html( html );
+		} else {
+            $( "#result" ).html( "<div align='center'>انتهى البحث ولا يوجد نتائج</div>" );
+		}
+		document.getElementById("b_search").disabled = false;
+    }
+});
+}
+}
+function get_live_chat_id(id) {
+$.ajax({ 
+    type: 'GET', 
+    url: 'https://www.googleapis.com/youtube/v3/videos', 
+    data: {key: api_key, part: 'snippet,contentDetails,statistics,liveStreamingDetails', id: id}, 
+    dataType: 'json',
+    success: function (data) {
+        if(typeof data['items'][0]['liveStreamingDetails']['activeLiveChatId'] !== "undefined")
+        {
+			live = data['items'][0]['liveStreamingDetails']['activeLiveChatId'];
+        }
+		if(live !== '') list_live_chat('');
+    }
+});
+}
+function openInNewTab(url) {
+  var win = window.open(url, '_blank');
+  win.focus();
+}
+function play(id,is_live,new_tab) {
+if(new_tab) {
+openInNewTab($( "#server" ).val() + "https://www.youtube.com/watch?v=" + id);
+} else {
+$( "#play" ).html('<iframe id="ytplayer" type="text/html" width="640" height="360" allowfullscreen="allowfullscreen" mozallowfullscreen="mozallowfullscreen" msallowfullscreen="msallowfullscreen" oallowfullscreen="oallowfullscreen" webkitallowfullscreen="webkitallowfullscreen" src="' + $( "#server" ).val() + 'https://www.youtube.com/embed/' + id + '" frameborder="0"></iframe>');
+if(is_live !== "") {
+get_live_chat_id(id);
+} else {
+$( "#message" ).html( "" );
+live = '';
+clearTimeout(live_timer);
+}
+}
+}
+</script>
+<style>
+.next {  display: inline-block; font-weight: bold; }
+.r { display: inline-block; width: 360px; height: 90px; font-size: 12px; padding: 40px; overflow: hidden; }
+.r_1 { position: relative; top: 0; left: 0; width: 120px;  height: 90px; float:right; }
+.r_2 { width: 240px;  height: 90px; float:right; }
+.r_t { padding: 10px; }
+.r_live { position: absolute; bottom: 0px; left: 0px; }
+</style>
+</head>
+<body>
+<div align="center">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAVCAMAAAA3vZ0wAAAAolBMVEX////IMSv//f39+PjJNC7++vr78vH66urKODLLPTfORUDKOjTKNjDUW1fQTUjegX745OPPSkTMQDr12tntubf77+/019bdfnr89PP67e323t3wyMbyzMrfhYHcenbVYl755uX34eD01tTwxcPvwsDuv73tvLrnoqDklpPYbGjSV1LprKnXaGPNQjzz09LxycjrtLLgi4jacm7bdnLZc2/SVFCIiHPeAAABwUlEQVQ4y5XQ146jMBSA4VNcsCmhJBNIIG3Te2Zm3//V1ia7sxkJLuaXsGSJD44NfZEkyWWp2kp2OyLoTQ/mv629GBMGbaHJrU3iz02P0RfsaQdAC00wWnyjDzzGriO2JbH4AmEJFAcjOub8On6CGlwcom8lX35YA+xwqqIDvMQGTxtJ602EvjeZ/wd3gCUOahyCLBSA0qQUKYEYKfdaZtFmDtjYIAZzP9reD5A1UaUzDLcwMDwOOUUPOEe9EJMqeKMUCmE10FrgGAD2KGJqgmGSyUHIs5CLL6DFRDlwGkm7g+GKYnx3YClwB/OM3OefYOXBiM0/IO0vSqaU7OEDD89LSSFOaOyAkQ5cOwFMNIxbALHgFoR/QdEJaFkUn+1IcH6CxvDz0MtukGVni2MP5g7MrWzP4EElHKg8qIJUBSsPsrU/wwybJ1DwEI/8SI1oRMhl5EEZYCpv5AAVzPkerppiPHnwbkvgQ3hcwN18zDIm60CaBnjnW5EG9Wgo1xhMmXeIWw8ku4WY3MrkNwdEFMI9OUYRigiN2+DFIIoUuqqxrzN1AjrlAjuKzgp64nRR1Jt6vR36tpvbdnpd6org5/0Bt30ii1pFePoAAAAASUVORK5CYII="> <input type="text" name="search" id="search" onkeypress="if(event.keyCode == 13) {search('')}"> <select id="server">
+  <option value="https://bodyresultsblueprint.com/m.php?">السيرفر 1</option>
+</select> <input type="button" id="b_search" value="بحث" onclick="search('')"> <input type="checkbox" id="live" name="live" value="live">
+</div>
+<br><br><br>
+<div align="center" style="direction: ltr;">
+<div id="play" style="display: inline-block;"></div> <div align="left" id="message" style="display: inline-block; max-height: 360px; max-width: 400px; overflow: auto;"></div>
+</div>
+<div id="result"></div>
+</body>
+</html>
